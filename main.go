@@ -17,16 +17,19 @@ var assets embed.FS
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
+	Subsonic := database.NewSubsonic()
 
-	hpRepo := database.NewHPRepo()
-	hpService := services.NewHPService(hpRepo)
+	hpService := services.NewHPService(Subsonic)
 	health := handlers.NewHealth(hpService)
+
+	listServ := services.NewListServ(Subsonic)
+	list := handlers.NewList(listServ)
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "YAMW",
-		Width:  1024,
-		Height: 768,
+		Title:     "YAMW",
+		Width:     1024,
+		Height:    768,
 		Frameless: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -36,6 +39,7 @@ func main() {
 		Bind: []interface{}{
 			app,
 			health,
+			list,
 		},
 	})
 

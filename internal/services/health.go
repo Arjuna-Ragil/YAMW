@@ -6,16 +6,16 @@ import (
 )
 
 type HPService struct {
-	HPRepo *database.HPRepo
+	Subsonic *database.Subsonic
 }
 
-func NewHPService(hpRepo *database.HPRepo) *HPService {
-	return &HPService{HPRepo: hpRepo}
+func NewHPService(Subsonic *database.Subsonic) *HPService {
+	return &HPService{Subsonic: Subsonic}
 }
 
-func (h *HPService) PingS() string{
+func (h *HPService) PingS() string {
 	endpoint := "ping"
 	SSURL := helper.CreateSSURL(endpoint)
 
-	return h.HPRepo.PingR(SSURL)
+	return h.Subsonic.FetchSubsonic(SSURL)
 }
