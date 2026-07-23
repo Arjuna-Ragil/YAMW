@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { GetRandomSongs } from "../wailsjs/go/handlers/List";
+import { GetStreamURL} from "../wailsjs/go/handlers/Stream";
 import { dto } from "../wailsjs/go/models";
 
 function App() {
@@ -36,6 +37,14 @@ function App() {
                 <h1>My Music Library</h1>
                 <p>Discover your randomly selected tracks</p>
             </header>
+
+            {/* 
+
+            Dont Remove this, it is used as a button to test function from the backend
+            
+            <button onClick={() => GetStreamURL("7b308YAsUovOpTyufndR3h")}>TestStream</button> 
+            
+            */}
             
             <main className="main-content">
                 {loading ? (

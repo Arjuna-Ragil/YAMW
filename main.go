@@ -25,6 +25,9 @@ func main() {
 	listServ := services.NewListServ(Subsonic)
 	list := handlers.NewList(listServ)
 
+	streamServ := services.NewStreamServ()
+	stream := handlers.NewStream(streamServ)
+
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:     "YAMW",
@@ -40,6 +43,7 @@ func main() {
 			app,
 			health,
 			list,
+			stream,
 		},
 	})
 
