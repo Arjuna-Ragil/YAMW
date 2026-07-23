@@ -4,6 +4,7 @@ import (
 	"YAMW/internal/database"
 	"YAMW/internal/dto"
 	helper "YAMW/internal/helpers"
+	"fmt"
 )
 
 type ListServ struct {
@@ -16,7 +17,8 @@ func NewListServ(subsonic *database.Subsonic) *ListServ{
 
 func (l *ListServ) SGetRandomSongs() ([]dto.Song, error){
 	endpoint := "getRandomSongs"
-	SSURL := helper.CreateSSURL(endpoint)
+	rawSSURL := helper.CreateSSURL(endpoint)
+	SSURL := fmt.Sprintf("%s&size=%s", rawSSURL, "50")
 	
 	return l.Subsonic.FetchRandomSongs(SSURL)
 }

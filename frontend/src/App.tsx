@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { GetRandomSongs } from "../wailsjs/go/handlers/List";
 import { GetStreamURL, GetCoverURL } from "../wailsjs/go/handlers/Stream";
 import { dto } from "../wailsjs/go/models";
+import { Shuffle, Repeat, Play, Pause } from 'lucide-react';
 
 const CoverImage = ({ id, className }: { id: string, className?: string }) => {
     const [url, setUrl] = useState<string>('');
@@ -13,7 +14,7 @@ const CoverImage = ({ id, className }: { id: string, className?: string }) => {
         return () => { mounted = false; };
     }, [id]);
 
-    if (!url) return <div className={`bg-white/10 animate-pulse ${className || ''}`}></div>;
+    if (!url) return <div className={`bg-emerald-900/30 animate-pulse ${className || ''}`}></div>;
     return <img src={url} alt="Cover" className={className} />;
 };
 
@@ -109,16 +110,21 @@ function App() {
 
     const activeSong = songs.find(s => s.id === activeSongId);
 
+    const handleSeek = (e: React.MouseEvent<HTMLDivElement>, duration: number) => {
+        if (audioRef.current) {
+            const bounds = e.currentTarget.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - bounds.left) / bounds.width));
+            const newTime = percent * duration;
+            audioRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+        }
+    };
+
     return (
-        <div className="max-w-250 mx-auto p-12 px-8 min-h-screen text-slate-100 font-outfit selection:bg-blue-500/30 [--wails-draggable:drag]">
-            <header className="text-center mb-14 animate-[fadeInDown_0.8s_ease-out]">
-                <h1 className="text-5xl font-bold mb-3 bg-linear-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent tracking-tight">
-                    My Music Library
-                </h1>
-                <p className="text-slate-400 text-lg font-light">
-                    Discover your randomly selected tracks
-                </p>
-            </header>
+        <div className="w-[306px] h-[384px] bg-slate-950/90 backdrop-blur-md border border-emerald-900/50 shadow-2xl flex flex-col overflow-hidden text-emerald-400 [--wails-draggable:drag] relative rounded-xl mx-auto selection:bg-emerald-500/30 text-lg">
+            
+            {/* CRT Screen Scanline effect overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.8)_50%)] bg-[length:100%_4px] z-50"></div>
 
             <audio 
                 ref={audioRef} 
@@ -128,96 +134,107 @@ function App() {
                 onPause={() => setIsPlaying(false)}
                 autoPlay
             />
+
+            {/* Header */}
+            <header className="px-3 py-2 border-b border-emerald-900/50 flex justify-between items-center bg-black/40 shrink-0 select-none">
+                <span className="text-xl font-bold tracking-wider">YAMW.exe</span>
+                <span className={`text-sm tracking-widest ${isPlaying ? 'animate-pulse text-emerald-300' : 'opacity-70'}`}>
+                    {isPlaying ? 'PLAYING' : 'READY'}
+                </span>
+            </header>
             
-            <main className="animate-[fadeIn_1s_ease-out]">
+            <main className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar [--wails-draggable:no-drag] z-10">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center gap-6 text-2xl text-slate-400 py-20 font-light">
-                        <div className="w-10 h-10 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
-                        <p>Loading your tunes...</p>
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-emerald-600/70 animate-pulse">
+                        <p className="text-xl">LOADING...</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-5">
+                    <>
                         {songs.length > 0 ? songs.map((song) => {
                             const isActive = song.id === activeSongId;
                             return (
                                 <div 
                                     key={song.id} 
-                                    className={`flex max-md:flex-col justify-between max-md:items-start items-center gap-4 bg-slate-800/70 backdrop-blur-xl border border-white/10 rounded-2xl p-5 px-6 transition-all duration-300 cursor-pointer shadow-md hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_12px_25px_-5px_rgba(0,0,0,0.3),0_0_15px_rgba(59,130,246,0.5)] hover:border-white/20 hover:bg-slate-700/85 [--wails-draggable:no-drag] ${
-                                        isActive ? 'border-blue-500 bg-slate-700/95 shadow-[0_12px_25px_-5px_rgba(0,0,0,0.4),_0_0_20px_rgba(59,130,246,0.4)] -translate-y-1 scale-[1.02]' : ''
-                                    }`}
+                                    className={`flex items-center gap-3 p-1.5 rounded cursor-pointer transition-all ${
+                                        isActive ? 'bg-emerald-500/20 border-emerald-500/40' : 'hover:bg-emerald-900/30 border-transparent'
+                                    } border`}
                                     onClick={() => handlePlaySong(song)}
                                 >
-                                    <div className="flex items-center gap-5 flex-1 min-w-0 w-full">
-                                        <CoverImage id={song.id} className="w-[60px] h-[60px] rounded-[10px] object-cover shrink-0 shadow-md" />
-                                        <div className="flex flex-col gap-1.5 overflow-hidden w-full">
-                                            <h2 className={`text-xl font-semibold m-0 truncate transition-colors duration-300 ${isActive ? 'text-blue-500' : 'text-slate-100'}`}>
-                                                {isPlaying && isActive ? "▶ " : ""}{song.title || "Unknown Title"}
-                                            </h2>
-                                            <p className="text-base text-slate-400 m-0 font-normal truncate">{song.artist || "Unknown Artist"}</p>
+                                    <CoverImage id={song.id} className="w-10 h-10 object-cover shrink-0 rounded-[4px] shadow-sm" />
+                                    <div className="flex flex-col min-w-0 flex-1 justify-center">
+                                        <div className="truncate text-lg leading-none mb-1">
+                                            {isPlaying && isActive ? "▶ " : ""}{song.title || "Unknown"}
+                                        </div>
+                                        <div className="truncate text-sm opacity-70 leading-none">
+                                            {song.artist || "Unknown"}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 shrink-0 max-md:w-full max-md:justify-start max-md:flex-wrap">
-                                        {song.album && <span className="px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-purple-500/10 text-purple-300 border border-purple-500/25">{song.album}</span>}
-                                        {song.genre && <span className="px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-blue-500/10 text-blue-300 border border-blue-500/25">{song.genre}</span>}
-                                        <span className="font-mono text-base text-slate-400 bg-black/25 px-2.5 py-1.5 rounded-lg min-w-[65px] text-center font-medium max-md:ml-auto">
-                                            {isActive ? `${formatDuration(currentTime)} / ${formatDuration(song.duration)}` : formatDuration(song.duration)}
-                                        </span>
-                                    </div>
+                                    <span className="text-sm shrink-0 opacity-80 px-1">
+                                        {formatDuration(song.duration)}
+                                    </span>
                                 </div>
                             );
                         }) : (
-                            <div className="flex flex-col items-center justify-center gap-6 text-2xl text-slate-400 py-20 font-light">No songs found.</div>
+                            <div className="flex flex-col items-center justify-center h-full text-emerald-600/70">NO SONGS FOUND</div>
                         )}
-                    </div>
+                    </>
                 )}
             </main>
 
             {/* Player Overlay layer */}
-            <div className={`fixed top-full left-0 w-full h-screen bg-slate-900/85 backdrop-blur-[25px] z-50 transition-transform duration-500 flex flex-col p-8 pt-20 ${isPlayerOpen ? '-translate-y-full' : ''}`}>
-                <button className="absolute top-8 left-8 bg-white/10 border border-white/10 text-white w-[50px] h-[50px] rounded-full flex items-center justify-center cursor-pointer text-[1.5rem] transition-all duration-300 hover:bg-white/20 hover:scale-105 z-[101] [--wails-draggable:no-drag]" onClick={() => setIsPlayerOpen(false)} title="Close Player">
-                    ↓
+            <div className={`absolute bottom-0 left-0 w-full h-[340px] bg-black/95 backdrop-blur-xl border-t border-emerald-800/60 z-40 transition-transform duration-300 flex flex-col p-4 [--wails-draggable:no-drag] ${isPlayerOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                
+                <button 
+                    className="absolute top-2 right-3 text-emerald-600 hover:text-emerald-300 text-[1.5rem] transition-colors cursor-pointer p-1" 
+                    onClick={() => setIsPlayerOpen(false)}
+                    title="Close Player"
+                >
+                    ▼
                 </button>
                 
                 {activeSong && (
-                    <div className="flex flex-col items-center justify-center h-full max-w-[450px] mx-auto w-full">
-                        <CoverImage id={activeSong.id} className="w-full aspect-square rounded-[20px] object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] mb-10" />
+                    <div className="flex flex-col h-full items-center mt-6">
+                        <CoverImage id={activeSong.id} className="w-[140px] h-[140px] object-cover rounded shadow-[0_0_20px_rgba(16,185,129,0.15)] mb-5" />
                         
-                        <div className="text-center w-full mb-10">
-                            <h2 className="text-[2.2rem] font-bold mb-2 text-slate-100">{activeSong.title || "Unknown Title"}</h2>
-                            <p className="text-xl text-slate-400 mb-6">{activeSong.artist || "Unknown Artist"}</p>
-                            <div className="flex items-center gap-4 w-full font-mono text-[0.9rem] text-slate-400 [--wails-draggable:no-drag]">
-                                <span>{formatDuration(currentTime)}</span>
-                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="text-center w-full min-w-0 mb-5 px-2">
+                            <div className="truncate text-xl font-bold text-emerald-300 mb-1">{activeSong.title || "Unknown"}</div>
+                            <div className="truncate text-base text-emerald-600">{activeSong.artist || "Unknown"}</div>
+                        </div>
+                        
+                        <div className="w-full flex items-center gap-3 text-sm text-emerald-600 mb-6 px-1">
+                            <span>{formatDuration(currentTime)}</span>
+                            <div 
+                                className="flex-1 py-2 -my-2 cursor-pointer flex items-center group"
+                                onClick={(e) => handleSeek(e, activeSong.duration)}
+                            >
+                                <div className="w-full h-1.5 bg-emerald-950 rounded-full overflow-hidden transition-all group-hover:h-2">
                                     <div 
-                                        className="h-full bg-blue-500 rounded-full transition-[width] duration-100 linear" 
+                                        className="h-full bg-emerald-500 rounded-full transition-[width] duration-100" 
                                         style={{ width: `${activeSong.duration ? (currentTime / activeSong.duration) * 100 : 0}%` }}
                                     ></div>
                                 </div>
-                                <span>{formatDuration(activeSong.duration)}</span>
                             </div>
+                            <span>{formatDuration(activeSong.duration)}</span>
                         </div>
-
-                        <div className="flex items-center justify-center gap-8 w-full [--wails-draggable:no-drag]">
+                        
+                        <div className="flex items-center justify-center gap-8 text-emerald-500 mt-auto mb-6">
                             <button 
-                                className={`bg-transparent border-none text-[1.5rem] cursor-pointer transition-all duration-300 flex items-center justify-center w-[50px] h-[50px] rounded-full hover:text-slate-100 hover:bg-white/10 ${isMix ? 'text-blue-500 bg-blue-500/10' : 'text-slate-400'}`} 
+                                className={`transition-colors cursor-pointer ${isMix ? 'text-emerald-300' : 'text-emerald-800 hover:text-emerald-600'}`} 
                                 onClick={(e) => { e.stopPropagation(); setIsMix(!isMix); }}
-                                title="Mix / Shuffle"
                             >
-                                🔀
+                                <Shuffle size={26} />
                             </button>
                             <button 
-                                className="border-none text-[2rem] cursor-pointer transition-all duration-300 flex items-center justify-center w-[70px] h-[70px] rounded-full bg-blue-500 text-white shadow-[0_10px_20px_rgba(59,130,246,0.3)] hover:scale-105 hover:bg-blue-600 hover:shadow-[0_10px_25px_rgba(59,130,246,0.5)]" 
+                                className="hover:scale-110 transition-transform text-emerald-400 hover:text-emerald-300 flex items-center justify-center w-12 h-12 cursor-pointer" 
                                 onClick={togglePlayPause}
-                                title={isPlaying ? "Pause" : "Play"}
                             >
-                                {isPlaying ? "⏸" : "▶"}
+                                {isPlaying ? <Pause size={36} /> : <Play size={36} className="ml-1" />}
                             </button>
                             <button 
-                                className={`bg-transparent border-none text-[1.5rem] cursor-pointer transition-all duration-300 flex items-center justify-center w-[50px] h-[50px] rounded-full hover:text-slate-100 hover:bg-white/10 ${isLooping ? 'text-blue-500 bg-blue-500/10' : 'text-slate-400'}`} 
+                                className={`transition-colors cursor-pointer ${isLooping ? 'text-emerald-300' : 'text-emerald-800 hover:text-emerald-600'}`} 
                                 onClick={(e) => { e.stopPropagation(); setIsLooping(!isLooping); }}
-                                title="Loop"
                             >
-                                🔁
+                                <Repeat size={26} />
                             </button>
                         </div>
                     </div>

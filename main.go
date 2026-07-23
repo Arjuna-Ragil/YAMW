@@ -35,6 +35,8 @@ func main() {
 		DisableResize: true,
 		Width:     306,
 		Height:    384,
+		MaxWidth: 306,
+		MaxHeight: 384,
 		Frameless: true,
 		AlwaysOnTop: true,
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},

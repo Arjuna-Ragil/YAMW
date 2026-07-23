@@ -1,0 +1,49 @@
+name: YAMW Release
+
+on:
+  push:
+    tags:
+      - 'V*'
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - name: 'YAMW'
+            platform:  'linux/amd64'
+            os: 'ubuntu-latest'
+          - name: 'YAMW'
+            platform:  'windows/amd64'
+            os: 'windows-latest'
+          - name: 'YAMW'
+            platform:  'darwin/universal'
+            os: 'macos-latest'
+
+    runs-on: ${{ matrix.build.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Build wails
+        uses: dAppServer/wails-build-action@v2.2
+        id: build
+        with:
+          build-name: ${{ matrix.build.name }}
+          build-platform: ${{ matrix.build.platform }}
+          package: false
+          go-version: '1.25'
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            build/bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
