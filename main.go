@@ -10,7 +10,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -33,10 +32,12 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:     "YAMW",
-		Width:     1024,
-		Height:    768,
+		DisableResize: true,
+		Width:     306,
+		Height:    384,
 		Frameless: true,
 		AlwaysOnTop: true,
+		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -46,11 +47,6 @@ func main() {
 			health,
 			list,
 			stream,
-		},
-		Windows: &windows.Options{
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
-			BackdropType:         windows.Acrylic, 
 		},
 		Mac: &mac.Options{
 			WebviewIsTransparent: true,
