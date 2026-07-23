@@ -9,6 +9,8 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -34,16 +36,25 @@ func main() {
 		Width:     1024,
 		Height:    768,
 		Frameless: true,
+		AlwaysOnTop: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
 			health,
 			list,
 			stream,
+		},
+		Windows: &windows.Options{
+			WebviewIsTransparent: true,
+			WindowIsTranslucent:  true,
+			BackdropType:         windows.Acrylic, 
+		},
+		Mac: &mac.Options{
+			WebviewIsTransparent: true,
+			WindowIsTranslucent:  true,
 		},
 	})
 

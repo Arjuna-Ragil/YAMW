@@ -13,3 +13,7 @@ func NewStream(streamServ *services.StreamServ) *Stream{
 func (s *Stream) GetStreamURL(id string) string{
 	return s.StreamServ.CreateStream(id)
 }
+
+func (s *Stream) GetCoverURL(id string) string{
+	return s.StreamServ.CreateCover(id)
+}
