@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { GetRandomSongs } from "../wailsjs/go/handlers/List";
 import { GetStreamURL, GetCoverURL } from "../wailsjs/go/handlers/Stream";
+import { PingTest } from "../wailsjs/go/handlers/Health";
+import { HasConfig, SaveConfig } from "../wailsjs/go/main/App";
 import { dto } from "../wailsjs/go/models";
 import { Shuffle, Repeat, Play, Pause } from 'lucide-react';
 
@@ -19,6 +21,13 @@ const CoverImage = ({ id, className }: { id: string, className?: string }) => {
 };
 
 function App() {
+    const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
+    const [serverUrl, setServerUrl] = useState<string>('');
+    const [username, setUsername] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
+    const [setupError, setSetupError] = useState<string>('');
+    const [isTesting, setIsTesting] = useState<boolean>(false);
+
     const [songs, setSongs] = useState<dto.Song[]>([]);
     const [loading, setLoading] = useState(true);
     
@@ -33,20 +42,55 @@ function App() {
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        const fetchSongs = async () => {
-            try {
-                const results = await GetRandomSongs();
-                if (results) {
-                    setSongs(results);
-                }
-            } catch (err) {
-                console.error("Error fetching songs:", err);
-            } finally {
+        HasConfig().then(has => {
+            if (has) {
+                setIsConfigured(true);
+                fetchSongs();
+            } else {
+                setIsConfigured(false);
                 setLoading(false);
             }
-        };
-        fetchSongs();
+        }).catch(err => {
+            console.error("Config check failed:", err);
+            setIsConfigured(false);
+            setLoading(false);
+        });
     }, []);
+
+    const fetchSongs = async () => {
+        try {
+            const results = await GetRandomSongs();
+            if (results) {
+                setSongs(results);
+            }
+        } catch (err) {
+            console.error("Error fetching songs:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSetup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSetupError('');
+        setIsTesting(true);
+        try {
+            const resStr = await PingTest(serverUrl, username, password);
+            const res = JSON.parse(resStr);
+            if (res["subsonic-response"] && res["subsonic-response"].status === "ok") {
+                await SaveConfig(serverUrl, username, password);
+                setIsConfigured(true);
+                setLoading(true);
+                fetchSongs();
+            } else {
+                setSetupError(res["subsonic-response"]?.error?.message || "Failed to connect.");
+            }
+        } catch (err: any) {
+            setSetupError(err.toString() || "Connection error.");
+        } finally {
+            setIsTesting(false);
+        }
+    };
 
     const formatDuration = (seconds: number) => {
         if (!seconds || isNaN(seconds)) return "0:00";
@@ -119,6 +163,63 @@ function App() {
             setCurrentTime(newTime);
         }
     };
+
+    // Show setup screen if config doesn't exist
+    if (isConfigured === false) {
+        return (
+            <div className="w-[306px] h-[384px] bg-slate-950/90 backdrop-blur-md border border-emerald-900/50 shadow-2xl flex flex-col overflow-hidden text-emerald-400 [--wails-draggable:drag] relative rounded-xl mx-auto selection:bg-emerald-500/30 text-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.8)_50%)] bg-[length:100%_4px] z-50"></div>
+                <header className="px-3 py-2 border-b border-emerald-900/50 flex justify-between items-center bg-black/40 shrink-0 select-none">
+                    <span className="text-xl font-bold tracking-wider">YAMW.exe</span>
+                    <span className="text-sm tracking-widest opacity-70">SETUP</span>
+                </header>
+                <main className="flex-1 overflow-y-auto p-4 flex flex-col hide-scrollbar [--wails-draggable:no-drag] z-10">
+                    <h2 className="text-xl font-bold mb-4 text-center text-emerald-300">SERVER CONFIG</h2>
+                    <form onSubmit={handleSetup} className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm">Server URL</label>
+                            <input 
+                                type="url" 
+                                required 
+                                value={serverUrl} 
+                                onChange={e => setServerUrl(e.target.value)} 
+                                className="bg-black/50 border border-emerald-900/50 rounded px-2 py-1 text-emerald-400 focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-emerald-900"
+                                placeholder="http://192.168.1.10:4533"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm">Username</label>
+                            <input 
+                                type="text" 
+                                required 
+                                value={username} 
+                                onChange={e => setUsername(e.target.value)} 
+                                className="bg-black/50 border border-emerald-900/50 rounded px-2 py-1 text-emerald-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm">Password</label>
+                            <input 
+                                type="password" 
+                                required 
+                                value={password} 
+                                onChange={e => setPassword(e.target.value)} 
+                                className="bg-black/50 border border-emerald-900/50 rounded px-2 py-1 text-emerald-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                            />
+                        </div>
+                        {setupError && <div className="text-red-400 text-sm mt-1 text-center bg-red-900/20 p-1 rounded border border-red-900/50">{setupError}</div>}
+                        <button 
+                            type="submit" 
+                            disabled={isTesting}
+                            className="mt-3 bg-emerald-900/40 hover:bg-emerald-800/60 border border-emerald-700/50 rounded py-2 text-center font-bold transition-colors disabled:opacity-50"
+                        >
+                            {isTesting ? "CONNECTING..." : "CONNECT & SAVE"}
+                        </button>
+                    </form>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="w-[306px] h-[384px] bg-slate-950/90 backdrop-blur-md border border-emerald-900/50 shadow-2xl flex flex-col overflow-hidden text-emerald-400 [--wails-draggable:drag] relative rounded-xl mx-auto selection:bg-emerald-500/30 text-lg">

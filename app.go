@@ -37,3 +37,8 @@ func (a *App) SaveConfig(serverURL, username, password string) error{
 
 	return os.WriteFile(filePath, data, 0644)
 }
+
+func (a *App) HasConfig() bool {
+	_, err := helper.LoadConfig()
+	return err == nil
+}
