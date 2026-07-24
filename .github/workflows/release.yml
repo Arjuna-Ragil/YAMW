@@ -53,8 +53,20 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Build Wails App
+      - name: Build Wails App (Windows & macOS)
+        if: runner.os != 'Linux'
         run: wails build -platform ${{ matrix.build.platform }} -clean
+
+      - name: Build Wails App (Linux)
+        if: runner.os == 'Linux'
+        run: wails build -platform ${{ matrix.build.platform }} -clean -tags webkit2_41
+
+      - name: Zip macOS App Bundle
+        if: runner.os == 'macOS'
+        run: |
+          cd build/bin
+          zip -r YAMW-macOS.zip YAMW.app
+          rm -rf YAMW.app
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v3

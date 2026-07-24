@@ -1,10 +1,10 @@
 package helper
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/joho/godotenv"
+	"path/filepath"
 )
 
 type Config struct {
@@ -13,20 +13,31 @@ type Config struct {
 	Password  string
 }
 
-func LoadConfig() Config{
-	err := godotenv.Load(); if err != nil{
-		fmt.Println("Failed to load env, using system env", err)
+func GetConfigPath() (string, error){
+	configDir, err := os.UserConfigDir(); if err != nil{
+		return "", fmt.Errorf("Failed to get config directory")
 	}
-	return Config{
-		ServerURL: getEnv("SERVER_URL", "http://127.0.0.1:4533"),
-		Username: getEnv("USERNAME", "admin"),
-		Password: getEnv("PASSWORD", "admin"),
+
+	appDir := filepath.Join(configDir, "YAMW")
+
+	err = os.MkdirAll(appDir, 0755); if err != nil{
+		return "", fmt.Errorf("Failed to make directory")
 	}
+
+	return filepath.Join(appDir, "config.json"), nil
 }
 
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+func LoadConfig() (Config, error){
+	var Config Config
+	filepath, err := GetConfigPath(); if err != nil{
+		return Config, fmt.Errorf("%s", err)
 	}
-	return fallback
+	data, err := os.ReadFile(filepath); if err != nil{
+		return Config, fmt.Errorf("Failed to read config file: %s", err)
+	}
+
+	err = json.Unmarshal(data, &Config)
+
+	return Config, nil
+	
 }
